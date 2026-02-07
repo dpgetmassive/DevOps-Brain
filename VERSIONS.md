@@ -38,6 +38,11 @@ Current versions of all skills. Agents can compare against local versions to che
 | runbook-writer | Documentation | 1.0.0 | 2026-02-07 |
 | infra-documentation | Documentation | 1.0.0 | 2026-02-07 |
 | incident-report | Documentation | 1.0.0 | 2026-02-07 |
+| project-initiation | Governance | 1.0.0 | 2026-02-07 |
+| project-compliance | Governance | 1.0.0 | 2026-02-07 |
+| project-tracking | Governance | 1.0.0 | 2026-02-07 |
+| project-documentation | Governance | 1.0.0 | 2026-02-07 |
+| project-testing | Governance | 1.0.0 | 2026-02-07 |
 
 ## Context Files
 
@@ -46,6 +51,7 @@ Current versions of all skills. Agents can compare against local versions to che
 | infrastructure-context.md | 1.0.0 | 2026-02-07 |
 | network-map.md | 1.0.0 | 2026-02-07 |
 | service-inventory.md | 1.0.0 | 2026-02-07 |
+| projects-registry.md | 1.0.0 | 2026-02-07 |
 
 ## Recent Changes
 
@@ -54,3 +60,15 @@ Current versions of all skills. Agents can compare against local versions to che
 - Initial release: 32 skills across 8 domains
 - Context files populated from homelab documentation
 - Tool registry with 25 integration guides
+
+### 2026-02-07 (Evening)
+
+- Added Governance domain: 5 new skills for project management and compliance
+  - project-initiation: Engineer interview pattern, project structure, GitHub Projects setup
+  - project-compliance: Compliance validation with soft warnings, SMB1001 mapping
+  - project-tracking: Kanban board management, issue tracking, milestones
+  - project-documentation: Documentation standards, ADRs, runbooks
+  - project-testing: Test plans, coverage validation, CI/CD testing
+- Added github-projects tool integration guide
+- Added projects-registry.md context file
+- Total: 37 skills across 9 domains

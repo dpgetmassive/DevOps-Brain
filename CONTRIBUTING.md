@@ -10,7 +10,7 @@ Guide for adding new skills or improving existing ones in the DevOps Brain toolk
 mkdir -p skills/{domain}/{skill-name}
 ```
 
-Domain must be one of: `linux`, `proxmox`, `homelab`, `m365`, `ai`, `cicd`, `security`, `documentation`.
+Domain must be one of: `linux`, `proxmox`, `homelab`, `m365`, `ai`, `cicd`, `security`, `documentation`, `governance`.
 
 ### 2. Create the SKILL.md file
 

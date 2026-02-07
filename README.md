@@ -45,6 +45,11 @@ Skills are markdown files that give AI agents specialized knowledge and workflow
 | **Documentation** | [runbook-writer](skills/documentation/runbook-writer/) | Structured runbooks with verification and rollback |
 | | [infra-documentation](skills/documentation/infra-documentation/) | Architecture diagrams, ADRs, service catalogs |
 | | [incident-report](skills/documentation/incident-report/) | Post-mortems, root cause analysis, action tracking |
+| **Governance** | [project-initiation](skills/governance/project-initiation/) | Project setup, folder structure, compliance checklist, GitHub Projects |
+| | [project-compliance](skills/governance/project-compliance/) | Compliance validation, SMB1001 mapping, soft warnings |
+| | [project-tracking](skills/governance/project-tracking/) | Kanban boards, issue management, milestone tracking |
+| | [project-documentation](skills/governance/project-documentation/) | Documentation standards, ADRs, runbooks, service catalog |
+| | [project-testing](skills/governance/project-testing/) | Test plans, coverage validation, CI/CD testing |
 <!-- SKILLS:END -->
 
 ## Installation
@@ -86,6 +91,12 @@ Once installed, ask your AI agent to help with DevOps tasks:
 
 "Write a runbook for TrueNAS failover"
 -> Uses runbook-writer skill
+
+"Start a new monitoring dashboard project"
+-> Uses project-initiation skill (interviews engineer, creates structure, sets up board)
+
+"Check compliance status for project X"
+-> Uses project-compliance skill
 ```
 
 ## Environment Context
@@ -95,6 +106,7 @@ The `context/` directory contains environment-specific information that makes sk
 - **[infrastructure-context.md](context/infrastructure-context.md)** - Host registry, IPs, roles, OS versions
 - **[network-map.md](context/network-map.md)** - Network topology, VLANs, VIPs, DNS
 - **[service-inventory.md](context/service-inventory.md)** - Running services, ports, dependencies
+- **[projects-registry.md](context/projects-registry.md)** - Active projects, status, compliance tracking
 
 ## Tool Integrations
 

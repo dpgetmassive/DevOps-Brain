@@ -19,6 +19,7 @@ Quick reference for AI agents to discover tool capabilities and integration meth
 | ansible | Automation | - | - | Y | Y | [ansible.md](integrations/ansible.md) |
 | docker | Containers | Y | - | Y | Y | [docker.md](integrations/docker.md) |
 | github | CI/CD | Y | Y | Y | Y | [github.md](integrations/github.md) |
+| github-projects | Project Management | Y | - | Y | Y | [github-projects.md](integrations/github-projects.md) |
 | pihole | DNS | Y | - | Y | - | [pihole.md](integrations/pihole.md) |
 | traefik | Proxy | Y | - | - | - | [traefik.md](integrations/traefik.md) |
 | ntfy | Notifications | Y | - | Y | - | [ntfy.md](integrations/ntfy.md) |
@@ -88,8 +89,9 @@ Quick reference for AI agents to discover tool capabilities and integration meth
 |------|----------|:------:|
 | **ansible** | Configuration management, patching | Y |
 | **github** | Source control, CI/CD workflows, PRs | Y |
+| **github-projects** | Project boards, Kanban tracking, issue management | Y |
 
-**Agent recommendation**: Ansible for infrastructure tasks. GitHub Actions for application CI/CD.
+**Agent recommendation**: Ansible for infrastructure tasks. GitHub Actions for application CI/CD. GitHub Projects for project tracking.
 
 ### AI / LLM
 
@@ -164,3 +166,7 @@ Quick reference for AI agents to discover tool capabilities and integration meth
 ### Manage M365 tenant
 1. Read [ms-graph.md](integrations/ms-graph.md) for Graph API operations
 2. Read [powershell.md](integrations/powershell.md) for PowerShell automation
+
+### Start a new project
+1. Read [github-projects.md](integrations/github-projects.md) for project board setup
+2. Use project-initiation skill for complete project setup
