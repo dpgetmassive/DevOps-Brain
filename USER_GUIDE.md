@@ -6,7 +6,7 @@ A practical guide to getting the most out of the DevOps Brain agentic toolkit. W
 
 ## What Is This?
 
-DevOps Brain is a library of **32 agent skills** and **25 tool integration guides** that turn a general-purpose AI coding assistant into an environment-aware DevOps operator. Instead of getting generic "how to use Proxmox" answers, your agent produces commands with the correct IPs, SSH aliases, service names, and verification steps for the Get Massive Dojo homelab and Cyber People infrastructure.
+DevOps Brain is a library of **37 agent skills** and **26 tool integration guides** that turn a general-purpose AI coding assistant into an environment-aware DevOps operator. Instead of getting generic "how to use Proxmox" answers, your agent produces commands with the correct IPs, SSH aliases, service names, and verification steps for the Get Massive Dojo homelab and Cyber People infrastructure.
 
 The key difference between this and a wiki: **skills are instructions for an AI agent, not documentation for a human.** The agent reads the skill, reads your environment context, and produces targeted operational output. You are the pilot; the skills are the flight manual the copilot has memorized.
 
@@ -16,13 +16,14 @@ The key difference between this and a wiki: **skills are instructions for an AI 
 
 ### The Context-First Pattern
 
-Every skill depends on three context files that describe your specific environment:
+Every skill depends on four context files that describe your specific environment:
 
 | File | What It Contains | When It's Read |
 |------|-----------------|----------------|
 | `context/infrastructure-context.md` | Every host, IP, SSH alias, VM/CT ID, role | Always (before any skill) |
 | `context/network-map.md` | Subnets, VLANs, VIPs, DNS records, proxy routing | Networking and service tasks |
 | `context/service-inventory.md` | Running services with ports, health checks, dependencies | Service management tasks |
+| `context/projects-registry.md` | Active projects, status, compliance tracking, board links | Project management tasks |
 
 **This is the single most important concept.** When your context files are accurate, skills produce accurate output. When they drift, output drifts. Treat context files as living documents -- update them when you add a host, change an IP, or deploy a new service.
 
@@ -32,14 +33,14 @@ Every skill depends on three context files that describe your specific environme
 ┌─────────────────────────────────────────────┐
 │  YOU (natural language request)              │
 ├─────────────────────────────────────────────┤
-│  SKILLS (32 domain-specific instruction     │
+│  SKILLS (37 domain-specific instruction     │
 │  sets with guard rails, procedures,         │
 │  verification, and rollback)                │
 ├─────────────────────────────────────────────┤
 │  CONTEXT (your actual environment --        │
-│  hosts, IPs, services, topology)            │
+│  hosts, IPs, services, topology, projects)  │
 ├─────────────────────────────────────────────┤
-│  TOOLS (25 integration guides with         │
+│  TOOLS (26 integration guides with         │
 │  API endpoints, CLI commands, auth)         │
 └─────────────────────────────────────────────┘
 ```
@@ -96,6 +97,18 @@ You talk to the agent. The agent reads the relevant skill. The skill references 
 | Are hosts patched? | `patch-compliance` | "Generate a compliance report for all hosts" |
 | Audit configurations | `hardening-audit` | "Run a security audit on pve-scratchy" |
 | SMB1001 evidence | `smb1001-security-ops` | "Collect evidence for SMB1001 Device Security" |
+
+### "I'm starting a new project or feature"
+
+| What You Want | Skill | Example Prompt |
+|--------------|-------|----------------|
+| Start a new project | `project-initiation` | "I want to start a new monitoring dashboard project" |
+| Check compliance status | `project-compliance` | "Check compliance for the monitoring dashboard" |
+| Manage project board | `project-tracking` | "Create a Kanban board for the new project" |
+| Ensure docs are complete | `project-documentation` | "Validate documentation for project X" |
+| Check testing requirements | `project-testing` | "Verify test coverage meets requirements" |
+
+**Note**: `project-initiation` will interview you with 15 questions before creating anything. This ensures proper setup, compliance tracking, and documentation from day one.
 
 ---
 
@@ -199,7 +212,7 @@ When you see the agent running verification commands before your requested opera
 
 ## The Tool Registry
 
-Skills tell the agent *what* to do. Tool integrations tell it *how* to talk to specific systems. The 25 tool guides in `tools/integrations/` provide:
+Skills tell the agent *what* to do. Tool integrations tell it *how* to talk to specific systems. The 26 tool guides in `tools/integrations/` provide:
 
 - **API endpoints** with real URLs and authentication methods
 - **CLI commands** with actual syntax and flags
@@ -223,6 +236,7 @@ Update `context/` files whenever you:
 - Modify the backup schedule
 - Add a new DNS record
 - Change the network topology
+- Start a new project (updates `projects-registry.md` automatically via `project-initiation`)
 
 The agent cannot know about changes it hasn't been told about. Stale context is the most common cause of incorrect commands.
 
@@ -259,6 +273,16 @@ The `ai-gateway` skill for clawdbot is partially templated -- the exact port, Do
 
 M365 skills provide complete PowerShell workflows but need tenant-specific data (tenant ID, subscription level, existing policies) populated in the context. These skills are fully functional once you connect to a tenant.
 
+### Governance (Project Management & Compliance)
+
+The governance domain ensures new projects follow standardized processes:
+- **`project-initiation`**: Conducts an interview before creating project structure. Ensures compliance, documentation, and testing are considered from day one.
+- **`project-compliance`**: Provides **soft warnings** (reminders) but does not block merges. Validates against SMB1001 controls and operational standards.
+- **`project-tracking`**: Manages GitHub Projects boards (Kanban) for visual planning and status tracking.
+- **`project-documentation`** and **`project-testing`**: Ensure documentation and testing standards are met.
+
+When starting a new project, use `project-initiation` first. It will guide you through setup and create everything needed for compliance tracking.
+
 ---
 
 ## Common Patterns
@@ -286,6 +310,23 @@ The agent will follow a diagnostic chain: test VIP, test each Pi-hole, check kee
 ```
 
 This chains multiple skills: `docker-management` (deploy), `dns-management` (add record), `reverse-proxy` (add proxy host), and verifies each step.
+
+### "Starting a New Project"
+
+```
+"I want to start a new monitoring dashboard project"
+```
+
+The `project-initiation` skill will:
+1. **Interview you** with 15 questions (name, owner, type, scope, infrastructure, compliance, repository)
+2. **Show a summary** for confirmation before proceeding
+3. **Create project structure** (folders, templates, compliance checklist)
+4. **Set up Git repository** (new or link existing)
+5. **Create GitHub Project board** with default columns (Backlog → Planning → In Progress → Review → Testing → Done)
+6. **Generate templates** (README, architecture docs, ADRs, runbooks, CI workflow)
+7. **Update projects registry** for tracking
+
+The interview ensures compliance requirements are identified early, documentation is planned, and the project is properly tracked from the start.
 
 ### "Security Review" for a Client
 
@@ -322,7 +363,8 @@ gm-agentic-devops-brain/
 ├── context/                          # YOUR environment (update this!)
 │   ├── infrastructure-context.md     # Hosts, IPs, roles
 │   ├── network-map.md               # Network topology
-│   └── service-inventory.md         # Services, ports, dependencies
+│   ├── service-inventory.md         # Services, ports, dependencies
+│   └── projects-registry.md         # Active projects, status, compliance
 │
 ├── skills/                           # Agent instruction sets
 │   ├── linux/ (4)                    # OS administration
@@ -332,10 +374,11 @@ gm-agentic-devops-brain/
 │   ├── ai/ (3)                       # AI/LLM hosting
 │   ├── cicd/ (4)                     # Automation and pipelines
 │   ├── security/ (5)                 # Security and compliance
-│   └── documentation/ (3)           # Operational documentation
+│   ├── documentation/ (3)           # Operational documentation
+│   └── governance/ (5)               # Project management & compliance
 │
 ├── tools/                            # Tool reference material
-│   ├── REGISTRY.md                   # Capability matrix (25 tools)
+│   ├── REGISTRY.md                   # Capability matrix (26 tools)
 │   └── integrations/                 # Per-tool API/CLI guides
 │
 ├── README.md                         # Project overview
@@ -344,8 +387,10 @@ gm-agentic-devops-brain/
 └── CONTRIBUTING.md                   # How to add/improve skills
 ```
 
-**32 skills. 25 tool integrations. 3 context files. One brain.**
+**37 skills. 26 tool integrations. 4 context files. One brain.**
 
 ---
 
 **Last Updated**: 2026-02-07
+
+**Recent Updates**: Added Governance domain (5 skills) for project management and compliance tracking. Projects now follow standardized setup with compliance checklists, GitHub Projects boards, and documentation templates.
