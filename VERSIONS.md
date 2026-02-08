@@ -20,6 +20,7 @@ Current versions of all skills. Agents can compare against local versions to che
 | storage-management | Homelab | 1.0.0 | 2026-02-07 |
 | monitoring-ops | Homelab | 1.0.0 | 2026-02-07 |
 | homelab-services | Homelab | 1.0.0 | 2026-02-07 |
+| network-discovery | Homelab | 1.0.0 | 2026-02-07 |
 | entra-admin | M365 | 1.0.0 | 2026-02-07 |
 | m365-admin | M365 | 1.0.0 | 2026-02-07 |
 | m365-security | M365 | 1.0.0 | 2026-02-07 |
@@ -71,4 +72,5 @@ Current versions of all skills. Agents can compare against local versions to che
   - project-testing: Test plans, coverage validation, CI/CD testing
 - Added github-projects tool integration guide
 - Added projects-registry.md context file
-- Total: 37 skills across 9 domains
+- Added network-discovery skill: Automated network scanning and network-map.md updates
+- Total: 38 skills across 9 domains

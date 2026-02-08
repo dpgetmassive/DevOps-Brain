@@ -86,6 +86,192 @@ All hosts configured in `~/.ssh/config` with key-based auth. SSH multiplexing en
 4. Via Proxmox: `ssh pve-scratchy "pct exec <CTID> -- <command>"` (containers)
 5. Via Proxmox: `ssh pve-scratchy "qm guest exec <VMID> -- <command>"` (VMs)
 
+### SSH Key Setup
+
+**Primary SSH Key**: `~/.ssh/id_rsa` (or `~/.ssh/id_ed25519`)
+
+All homelab hosts are configured to accept key-based authentication. The same SSH key is typically authorized across all hosts for consistency.
+
+**SSH Config Example** (`~/.ssh/config`):
+
+```ssh-config
+# Homelab Infrastructure
+Host n100uck
+    HostName 10.16.1.18
+    User root
+    IdentityFile ~/.ssh/id_rsa
+    ControlMaster auto
+    ControlPath ~/.ssh/control-%h-%p-%r
+    ControlPersist 10m
+
+Host pve-scratchy
+    HostName 10.16.1.22
+    User root
+    IdentityFile ~/.ssh/id_rsa
+    ControlMaster auto
+    ControlPath ~/.ssh/control-%h-%p-%r
+    ControlPersist 10m
+
+Host pve-itchy
+    HostName 10.16.1.8
+    User root
+    IdentityFile ~/.ssh/id_rsa
+    ControlMaster auto
+    ControlPath ~/.ssh/control-%h-%p-%r
+    ControlPersist 10m
+
+Host opnsense
+    HostName 10.16.1.1
+    User root
+    IdentityFile ~/.ssh/id_rsa
+    ControlMaster auto
+    ControlPath ~/.ssh/control-%h-%p-%r
+    ControlPersist 10m
+
+Host truenas-scale
+    HostName 10.16.1.6
+    User root
+    IdentityFile ~/.ssh/id_rsa
+    ControlMaster auto
+    ControlPath ~/.ssh/control-%h-%p-%r
+    ControlPersist 10m
+
+Host truenas-dr
+    HostName 10.16.1.20
+    User root
+    IdentityFile ~/.ssh/id_rsa
+    ControlMaster auto
+    ControlPath ~/.ssh/control-%h-%p-%r
+    ControlPersist 10m
+
+Host gm-ai
+    HostName 10.16.1.9
+    User gm-admin
+    IdentityFile ~/.ssh/id_rsa
+    ControlMaster auto
+    ControlPath ~/.ssh/control-%h-%p-%r
+    ControlPersist 10m
+
+# Service Containers/VMs
+Host dockc
+    HostName 10.16.1.4
+    User root
+    IdentityFile ~/.ssh/id_rsa
+    ProxyJump pve-scratchy
+
+Host nginx-proxy-manager
+    HostName 10.16.1.50
+    User root
+    IdentityFile ~/.ssh/id_rsa
+    ProxyJump pve-scratchy
+
+Host piholed
+    HostName 10.16.1.16
+    User root
+    IdentityFile ~/.ssh/id_rsa
+    ProxyJump pve-scratchy
+
+Host authelia
+    HostName 10.16.1.25
+    User root
+    IdentityFile ~/.ssh/id_rsa
+    ProxyJump pve-scratchy
+
+Host traefik
+    HostName 10.16.1.26
+    User root
+    IdentityFile ~/.ssh/id_rsa
+    ProxyJump pve-scratchy
+
+# IoT VLAN
+Host homeassistant
+    HostName 10.16.66.9
+    User dp
+    IdentityFile ~/.ssh/id_rsa
+
+Host familyframed-pi
+    HostName 10.16.66.10
+    User dp
+    IdentityFile ~/.ssh/id_rsa
+
+# External/Tailscale
+Host cp-staging
+    HostName staging.cyber-people.tech
+    User developer
+    IdentityFile ~/.ssh/id_rsa
+
+Host dp-macbook-secondary
+    HostName 100.86.205.100
+    User dp
+    IdentityFile ~/.ssh/id_ed25519
+```
+
+**Key Features**:
+- **ControlMaster**: Enables SSH connection multiplexing (reuses existing connections)
+- **ControlPath**: Socket location for multiplexing
+- **ControlPersist**: Keeps connection alive for 10 minutes after last use
+- **ProxyJump**: For containers/VMs, routes through Proxmox host
+
+### Setting Up SSH Access
+
+**For a new user/agent**:
+
+1. **Generate SSH key** (if not exists):
+   ```bash
+   ssh-keygen -t rsa -b 4096 -f ~/.ssh/id_rsa -C "your-email@example.com"
+   # Or use ed25519:
+   ssh-keygen -t ed25519 -f ~/.ssh/id_ed25519 -C "your-email@example.com"
+   ```
+
+2. **Copy public key to hosts**:
+   ```bash
+   # Manual copy (one-time per host)
+   ssh-copy-id -i ~/.ssh/id_rsa.pub root@10.16.1.18  # n100uck
+   ssh-copy-id -i ~/.ssh/id_rsa.pub root@10.16.1.22  # pve-scratchy
+   # ... repeat for all hosts
+   
+   # Or via Ansible (if available):
+   ssh n100uck "cd ~/developerland/homelab/ansible && ansible-playbook deploy-ssh-key.yml -i inventory.ini"
+   ```
+
+3. **Create/update `~/.ssh/config`**:
+   - Copy the example config above
+   - Adjust `IdentityFile` path if using different key
+   - Adjust `User` if different username required
+
+4. **Test connection**:
+   ```bash
+   ssh n100uck "hostname"  # Should work without password
+   ssh pve-scratchy "hostname"
+   ```
+
+5. **Verify multiplexing**:
+   ```bash
+   # First connection
+   ssh n100uck "hostname"
+   # Second connection should reuse the first (check with `ssh -O check n100uck`)
+   ssh -O check n100uck
+   ```
+
+### SSH Key Management
+
+**Key Distribution**:
+- All homelab hosts accept the same SSH public key
+- Keys are managed via Ansible (on n100uck) for consistency
+- New keys can be added via `ansible-playbook` or manual `ssh-copy-id`
+
+**Key Rotation**:
+- Rotate keys periodically (recommended: annually)
+- Update `~/.ssh/config` with new key path
+- Deploy new public key to all hosts via Ansible
+- Remove old keys from `~/.ssh/authorized_keys` on hosts
+
+**Troubleshooting**:
+- **Connection refused**: Check host is online, firewall allows SSH (port 22)
+- **Permission denied**: Verify public key is in `~/.ssh/authorized_keys` on target host
+- **Host key verification failed**: Add host to `~/.ssh/known_hosts` or use `-o StrictHostKeyChecking=no` (not recommended for production)
+- **Multiplexing not working**: Check `~/.ssh/control-*` sockets exist, verify ControlMaster config
+
 ## Proxmox Cluster
 
 - **Cluster name**: 180-homelab

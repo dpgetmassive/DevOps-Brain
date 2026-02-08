@@ -350,7 +350,7 @@ The `smb1001-security-ops` skill runs automated checks across all 5 pillars, pro
 
 5. **Check related skills.** Every skill ends with a "Related Skills" section. If the agent's output doesn't quite match what you need, the answer might be in an adjacent skill.
 
-6. **Don't fight the SSH pattern.** Every command runs through `ssh <alias> "<command>"`. This is deliberate -- it ensures you're running on the right host, with the right user, every time. The aliases are defined in `~/.ssh/config` and the agent knows them from context.
+6. **Don't fight the SSH pattern.** Every command runs through `ssh <alias> "<command>"`. This is deliberate -- it ensures you're running on the right host, with the right user, every time. The aliases are defined in `~/.ssh/config` and the agent knows them from context. See `context/infrastructure-context.md` for SSH setup instructions and example config.
 
 7. **Iterate on skills.** If a skill's output is consistently missing something, improve the skill. This is a toolkit that gets better with use.
 

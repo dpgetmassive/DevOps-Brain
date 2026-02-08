@@ -27,6 +27,7 @@ Skills are markdown files that give AI agents specialized knowledge and workflow
 | | [storage-management](skills/homelab/storage-management/) | ZFS pools, TrueNAS, replication, NFS/SMB |
 | | [monitoring-ops](skills/homelab/monitoring-ops/) | ntfy alerts, dashboards, log analysis, uptime |
 | | [homelab-services](skills/homelab/homelab-services/) | Service catalog, dependencies, health checks |
+| | [network-discovery](skills/homelab/network-discovery/) | Network scanning, topology discovery, auto-update network-map.md |
 | **M365/Entra** | [entra-admin](skills/m365/entra-admin/) | Users, groups, conditional access, MFA, roles |
 | | [m365-admin](skills/m365/m365-admin/) | Exchange, SharePoint, Teams, licensing |
 | | [m365-security](skills/m365/m365-security/) | Defender, compliance, audit logs, DLP |
@@ -130,5 +131,5 @@ MIT
 ---
 
 **Last Updated**: 2026-02-07
-**Version**: 1.0.0
+**Version**: 1.1.0
 **Maintained by**: Get Massive Dojo Infrastructure Team

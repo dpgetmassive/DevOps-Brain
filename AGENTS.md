@@ -126,6 +126,12 @@ command2
 EOF
 ```
 
+**SSH Setup**: See `context/infrastructure-context.md` for complete SSH configuration, including:
+- Example `~/.ssh/config` entries for all hosts
+- SSH key setup instructions
+- Key management and distribution
+- Troubleshooting guide
+
 ### Environment-Specific Output
 
 Skills must reference concrete environment data:
