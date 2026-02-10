@@ -474,19 +474,47 @@ print("Container list file written")
             timeout=10
         )
         
-        # Parse qm guest exec output
+        # Parse qm guest exec output (it returns JSON)
         write_stdout = write_result.stdout
+        actual_output = ""
         if write_stdout.strip().startswith('{'):
             try:
                 json_output = json.loads(write_stdout)
-                write_stdout = json_output.get('out-data', write_stdout)
-                if 'err-data' in json_output:
+                actual_output = json_output.get('out-data', '')
+                if 'err-data' in json_output and json_output.get('err-data'):
                     write_result.stderr = json_output.get('err-data', write_result.stderr)
+                # Check exitcode from JSON
+                if json_output.get('exitcode', 0) != 0:
+                    write_result.returncode = json_output.get('exitcode', 1)
+            except:
+                actual_output = write_stdout
+        
+        # Check if file was written successfully
+        # Verify by checking if file exists on VM
+        verify_cmd = [
+            "/usr/bin/ssh", "-o", "ConnectTimeout=10", "-o", "BatchMode=yes",
+            self.ansible_host,
+            f"qm guest exec {self.ansible_vm} -- bash -c 'test -f {container_list_file} && echo OK || echo FAIL'"
+        ]
+        
+        verify_result = subprocess.run(
+            verify_cmd,
+            capture_output=True,
+            text=True,
+            timeout=5
+        )
+        
+        verify_output = verify_result.stdout
+        if verify_output.strip().startswith('{'):
+            try:
+                json_output = json.loads(verify_output)
+                verify_output = json_output.get('out-data', verify_output)
             except:
                 pass
         
-        if write_result.returncode != 0 or "Container list file written" not in write_stdout:
-            raise Exception(f"Failed to write container list file: {write_result.stderr}")
+        if write_result.returncode != 0 or "OK" not in verify_output:
+            error_msg = write_result.stderr if write_result.stderr else actual_output
+            raise Exception(f"Failed to write container list file: {error_msg}")
         
         try:
             # Execute container patching playbook (simplified version that reads from file)
