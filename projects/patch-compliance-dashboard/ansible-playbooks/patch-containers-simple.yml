@@ -1,0 +1,116 @@
+---
+- name: Patch LXC Containers via Proxmox
+  hosts: localhost
+  become: yes
+  gather_facts: no
+  
+  vars:
+    security_only: "{{ patch_type | default('all') == 'security' }}"
+    dry_run: "{{ dry_run_mode | default(false) }}"
+  
+  tasks:
+    - name: Read container list from file
+      slurp:
+        src: /tmp/ansible_container_list.txt
+      register: container_list_file
+      failed_when: false
+    
+    - name: Parse container list
+      set_fact:
+        containers: "{{ container_list_file.content | b64decode | from_json | default([]) }}"
+      when: container_list_file.content is defined
+    
+    - name: Set default empty list if file doesn't exist
+      set_fact:
+        containers: []
+      when: container_list_file.content is not defined
+    
+    - name: Debug container list
+      debug:
+        msg: "Processing {{ containers | length }} container(s)"
+      when: containers | length > 0
+    
+    - name: Patch container
+      shell: |
+        pct exec {{ item.ct_id }} -- bash -c "
+          export DEBIAN_FRONTEND=noninteractive &&
+          apt update &&
+          apt list --upgradable 2>/dev/null | tail -n+2
+        "
+      loop: "{{ containers }}"
+      register: container_updates
+      changed_when: false
+      failed_when: false
+      when: containers | length > 0
+    
+    - name: Count updates per container
+      shell: |
+        pct exec {{ item.ct_id }} -- bash -c "
+          apt list --upgradable 2>/dev/null | tail -n+2 | wc -l
+        "
+      loop: "{{ containers }}"
+      register: container_counts
+      changed_when: false
+      when: containers | length > 0
+    
+    - name: Count security updates per container
+      shell: |
+        pct exec {{ item.ct_id }} -- bash -c "
+          apt list --upgradable 2>/dev/null | grep -i security | wc -l
+        "
+      loop: "{{ containers }}"
+      register: container_security_counts
+      changed_when: false
+      failed_when: false
+      when: containers | length > 0
+    
+    - name: Display update summary
+      debug:
+        msg: "{{ item.item.name }} (CT {{ item.item.ct_id }}): {{ item.stdout | trim }} total, {{ container_security_counts.results[loop.index0].stdout | trim }} security"
+      loop: "{{ container_counts.results | default([]) }}"
+      when: containers | length > 0
+    
+    - name: Dry run - Show what would be upgraded
+      shell: |
+        pct exec {{ item.ct_id }} -- bash -c "
+          export DEBIAN_FRONTEND=noninteractive &&
+          apt upgrade --dry-run
+        "
+      loop: "{{ containers }}"
+      register: container_dry_run
+      when: 
+        - containers | length > 0
+        - dry_run
+      changed_when: false
+    
+    - name: Upgrade packages (security only)
+      shell: |
+        pct exec {{ item.ct_id }} -- bash -c "
+          export DEBIAN_FRONTEND=noninteractive &&
+          apt upgrade -y {{ '--only-upgrade $(apt list --upgradable 2>/dev/null | grep -i security | cut -d/ -f1 | tr \"\\n\" \" \")' if security_only else '' }}
+        "
+      loop: "{{ containers }}"
+      when: 
+        - containers | length > 0
+        - not dry_run
+        - container_security_counts.results[loop.index0].stdout | int > 0
+        - security_only
+      register: container_upgrade_security
+    
+    - name: Upgrade all packages
+      shell: |
+        pct exec {{ item.ct_id }} -- bash -c "
+          export DEBIAN_FRONTEND=noninteractive &&
+          apt upgrade -y
+        "
+      loop: "{{ containers }}"
+      when: 
+        - containers | length > 0
+        - not dry_run
+        - container_counts.results[loop.index0].stdout | int > 0
+        - not security_only
+      register: container_upgrade_all
+    
+    - name: Final status
+      debug:
+        msg: "Container patching {{ 'completed' if not dry_run else 'dry-run completed' }}"

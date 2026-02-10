@@ -207,10 +207,15 @@ else
 fi
 
 # Copy playbooks to target directory
-if [ -f "$playbooks_source/patch-containers.yml" ] && [ -f "$playbooks_source/patch-debian.yml" ]; then
-    cp "$playbooks_source/patch-containers.yml" "$playbook_dir/"
+if [ -f "$playbooks_source/patch-containers-simple.yml" ] && [ -f "$playbooks_source/patch-debian.yml" ]; then
+    cp "$playbooks_source/patch-containers-simple.yml" "$playbook_dir/"
     cp "$playbooks_source/patch-debian.yml" "$playbook_dir/"
     echo "Playbooks deployed successfully"
+elif [ -f "$playbooks_source/patch-containers.yml" ] && [ -f "$playbooks_source/patch-debian.yml" ]; then
+    # Fallback to old playbook name
+    cp "$playbooks_source/patch-containers.yml" "$playbook_dir/"
+    cp "$playbooks_source/patch-debian.yml" "$playbook_dir/"
+    echo "Playbooks deployed successfully (using fallback)"
 else
     echo "ERROR: Playbook files not found in repository" >&2
     exit 1
@@ -443,17 +448,16 @@ fi
             job["progress"][container["name"]] = "running"
             job["results"][container["name"]] = {"success": False, "output": "", "packages_upgraded": 0}
         
-        # Write containers JSON to a temp file on VM 102 and pass via @filename syntax
-        # This avoids shell interpretation issues with JSON
-        containers_json = json.dumps(containers)
-        extra_vars_file = "/tmp/ansible_containers.json"
+        # Write containers JSON to a simple text file that playbook can read
+        # This is more reliable than passing via extra-vars
+        container_list_file = "/tmp/ansible_container_list.txt"
         
-        # Write JSON file to VM using Python to avoid shell escaping issues
+        # Write JSON file to VM using Python
         write_json_script = f'''import json
 containers = {repr(containers)}
-with open("{extra_vars_file}", "w") as f:
-    json.dump({{"target_containers": containers}}, f)
-print("JSON file written")
+with open("{container_list_file}", "w") as f:
+    json.dump(containers, f)
+print("Container list file written")
 '''
         
         write_json_cmd = [
@@ -481,17 +485,16 @@ print("JSON file written")
             except:
                 pass
         
-        if write_result.returncode != 0 or "JSON file written" not in write_stdout:
-            raise Exception(f"Failed to write containers JSON file: {write_result.stderr}")
+        if write_result.returncode != 0 or "Container list file written" not in write_stdout:
+            raise Exception(f"Failed to write container list file: {write_result.stderr}")
         
         try:
-            # Execute container patching playbook using @filename syntax for JSON
+            # Execute container patching playbook (simplified version that reads from file)
             cmd = [
                 "/usr/bin/ssh", "-o", "ConnectTimeout=10", "-o", "BatchMode=yes",
                 self.ansible_host,
                 f"qm guest exec {self.ansible_vm} -- ansible-playbook",
-                f"{self.playbook_path}/patch-containers.yml",
-                "-e", f"@{extra_vars_file}",
+                f"{self.playbook_path}/patch-containers-simple.yml",
                 "-e", f"patch_type={job['patch_type']}",
                 "-e", f"dry_run_mode={str(job['dry_run']).lower()}"
             ]
@@ -547,11 +550,11 @@ print("JSON file written")
                         }
         
         finally:
-            # Cleanup: Remove JSON file from VM
+            # Cleanup: Remove container list file from VM
             cleanup_cmd = [
                 "/usr/bin/ssh", "-o", "ConnectTimeout=10", "-o", "BatchMode=yes",
                 self.ansible_host,
-                f"qm guest exec {self.ansible_vm} -- bash -c 'rm -f {extra_vars_file}'"
+                f"qm guest exec {self.ansible_vm} -- bash -c 'rm -f {container_list_file}'"
             ]
             subprocess.run(cleanup_cmd, capture_output=True, timeout=5)
     
