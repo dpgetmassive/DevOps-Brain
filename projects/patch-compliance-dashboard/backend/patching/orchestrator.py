@@ -449,26 +449,20 @@ fi
             job["results"][container["name"]] = {"success": False, "output": "", "packages_upgraded": 0}
         
         # Write containers JSON to a simple text file that playbook can read
-        # This is more reliable than passing via extra-vars
+        # Use base64 encoding to avoid shell escaping issues
         container_list_file = "/tmp/ansible_container_list.txt"
+        containers_json = json.dumps(containers)
+        containers_b64 = base64.b64encode(containers_json.encode('utf-8')).decode('utf-8')
         
-        # Write JSON file to VM using Python
-        write_json_script = f'''import json
-containers = {repr(containers)}
-with open("{container_list_file}", "w") as f:
-    json.dump(containers, f)
-print("Container list file written")
-'''
-        
-        write_json_cmd = [
+        # Write file using base64 decode via bash (more reliable than Python stdin)
+        write_cmd = [
             "/usr/bin/ssh", "-o", "ConnectTimeout=10", "-o", "BatchMode=yes",
             self.ansible_host,
-            f"qm guest exec {self.ansible_vm} -- python3"
+            f"qm guest exec {self.ansible_vm} -- bash -c 'echo {containers_b64} | base64 -d > {container_list_file} && echo OK'"
         ]
         
         write_result = subprocess.run(
-            write_json_cmd,
-            input=write_json_script,
+            write_cmd,
             capture_output=True,
             text=True,
             timeout=10
@@ -489,12 +483,11 @@ print("Container list file written")
             except:
                 actual_output = write_stdout
         
-        # Check if file was written successfully
-        # Verify by checking if file exists on VM
+        # Verify file was written and contains valid JSON
         verify_cmd = [
             "/usr/bin/ssh", "-o", "ConnectTimeout=10", "-o", "BatchMode=yes",
             self.ansible_host,
-            f"qm guest exec {self.ansible_vm} -- bash -c 'test -f {container_list_file} && echo OK || echo FAIL'"
+            f"qm guest exec {self.ansible_vm} -- bash -c 'test -f {container_list_file} && python3 -c \"import json; json.load(open(\\\"{container_list_file}\\\")); print(\\\"OK\\\")\" || echo FAIL'"
         ]
         
         verify_result = subprocess.run(
