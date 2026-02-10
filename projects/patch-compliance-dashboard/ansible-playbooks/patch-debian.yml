@@ -1,0 +1,87 @@
+---
+- name: Patch Debian/Ubuntu Systems
+  hosts: "{{ target_hosts | default('all') }}"
+  become: yes
+  gather_facts: yes
+  
+  vars:
+    security_only: "{{ patch_type | default('all') == 'security' }}"
+    dry_run: "{{ dry_run_mode | default(false) }}"
+  
+  tasks:
+    - name: Update apt cache
+      apt:
+        update_cache: yes
+        cache_valid_time: 3600
+    
+    - name: List upgradable packages
+      command: apt list --upgradable 2>/dev/null | tail -n+2
+      register: upgradable_packages
+      changed_when: false
+      failed_when: false
+    
+    - name: Display packages to be upgraded
+      debug:
+        msg: "{{ upgradable_packages.stdout_lines }}"
+      when: upgradable_packages.stdout_lines | length > 0
+    
+    - name: Count upgradable packages
+      command: apt list --upgradable 2>/dev/null | tail -n+2 | wc -l
+      register: package_count
+      changed_when: false
+    
+    - name: Count security updates
+      command: apt list --upgradable 2>/dev/null | grep -i security | wc -l
+      register: security_count
+      changed_when: false
+      failed_when: false
+    
+    - name: Display update summary
+      debug:
+        msg:
+          - "Total packages to upgrade: {{ package_count.stdout | trim }}"
+          - "Security updates: {{ security_count.stdout | trim }}"
+    
+    - name: Dry run - Show what would be upgraded
+      command: apt upgrade --dry-run
+      register: dry_run_output
+      when: dry_run
+      changed_when: false
+    
+    - name: Display dry run output
+      debug:
+        var: dry_run_output.stdout_lines
+      when: dry_run
+    
+    - name: Upgrade packages (security only)
+      apt:
+        upgrade: dist
+        update_cache: yes
+        autoremove: yes
+        autoclean: yes
+      when: not dry_run and security_only and security_count.stdout | int > 0
+      register: upgrade_result
+    
+    - name: Upgrade all packages
+      apt:
+        upgrade: dist
+        update_cache: yes
+        autoremove: yes
+        autoclean: yes
+      when: not dry_run and not security_only and package_count.stdout | int > 0
+      register: upgrade_result
+    
+    - name: Reboot if kernel was updated
+      reboot:
+        reboot_timeout: 300
+        pre_reboot_delay: 10
+        post_reboot_delay: 30
+      when: 
+        - not dry_run
+        - upgrade_result is defined
+        - upgrade_result.changed
+        - ansible_facts['kernel'] is defined
+    
+    - name: Final status
+      debug:
+        msg: "Patching {{ 'completed' if not dry_run else 'dry-run completed' }}"

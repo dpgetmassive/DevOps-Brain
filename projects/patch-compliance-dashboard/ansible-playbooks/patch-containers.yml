@@ -1,0 +1,101 @@
+---
+- name: Patch LXC Containers via Proxmox
+  hosts: localhost
+  become: yes
+  gather_facts: no
+  
+  vars:
+    containers: "{{ target_containers | default([]) }}"
+    security_only: "{{ patch_type | default('all') == 'security' }}"
+    dry_run: "{{ dry_run_mode | default(false) }}"
+    proxmox_nodes: ["pve-scratchy", "pve-itchy"]
+  
+  tasks:
+    - name: Patch container
+      shell: |
+        pct exec {{ item.ct_id }} -- bash -c "
+          export DEBIAN_FRONTEND=noninteractive &&
+          apt update &&
+          apt list --upgradable 2>/dev/null | tail -n+2
+        "
+      loop: "{{ containers }}"
+      register: container_updates
+      changed_when: false
+      failed_when: false
+    
+    - name: Display container update lists
+      debug:
+        msg: "{{ item.item.name }} (CT {{ item.item.ct_id }}): {{ item.stdout_lines }}"
+      loop: "{{ container_updates.results }}"
+      when: item.stdout_lines | length > 0
+    
+    - name: Count updates per container
+      shell: |
+        pct exec {{ item.ct_id }} -- bash -c "
+          apt list --upgradable 2>/dev/null | tail -n+2 | wc -l
+        "
+      loop: "{{ containers }}"
+      register: container_counts
+      changed_when: false
+    
+    - name: Count security updates per container
+      shell: |
+        pct exec {{ item.ct_id }} -- bash -c "
+          apt list --upgradable 2>/dev/null | grep -i security | wc -l
+        "
+      loop: "{{ containers }}"
+      register: container_security_counts
+      changed_when: false
+      failed_when: false
+    
+    - name: Display update summary
+      debug:
+        msg: "{{ item.item.name }} (CT {{ item.item.ct_id }}): {{ item.stdout | trim }} total, {{ container_security_counts.results[loop.index0].stdout | trim }} security"
+      loop: "{{ container_counts.results }}"
+    
+    - name: Dry run - Show what would be upgraded
+      shell: |
+        pct exec {{ item.ct_id }} -- bash -c "
+          export DEBIAN_FRONTEND=noninteractive &&
+          apt upgrade --dry-run
+        "
+      loop: "{{ containers }}"
+      register: container_dry_run
+      when: dry_run
+      changed_when: false
+    
+    - name: Display dry run output
+      debug:
+        var: item.stdout_lines
+      loop: "{{ container_dry_run.results }}"
+      when: dry_run
+    
+    - name: Upgrade packages (security only)
+      shell: |
+        pct exec {{ item.ct_id }} -- bash -c "
+          export DEBIAN_FRONTEND=noninteractive &&
+          apt upgrade -y {{ '--only-upgrade $(apt list --upgradable 2>/dev/null | grep -i security | cut -d/ -f1 | tr \"\\n\" \" \")' if security_only else '' }}
+        "
+      loop: "{{ containers }}"
+      when: 
+        - not dry_run
+        - container_security_counts.results[loop.index0].stdout | int > 0
+        - security_only
+      register: container_upgrade_security
+    
+    - name: Upgrade all packages
+      shell: |
+        pct exec {{ item.ct_id }} -- bash -c "
+          export DEBIAN_FRONTEND=noninteractive &&
+          apt upgrade -y
+        "
+      loop: "{{ containers }}"
+      when: 
+        - not dry_run
+        - container_counts.results[loop.index0].stdout | int > 0
+        - not security_only
+      register: container_upgrade_all
+    
+    - name: Final status
+      debug:
+        msg: "Container patching {{ 'completed' if not dry_run else 'dry-run completed' }}"
