@@ -435,29 +435,63 @@ fi
     
     async def _patch_containers(self, job: Dict[str, Any], containers: List[Dict[str, Any]]):
         """Patch LXC containers with enhanced output parsing"""
-        # Create temporary inventory file for containers
         import tempfile
         import os
         
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
-            json.dump(containers, f)
-            containers_file = f.name
+        # Initialize progress for all containers
+        for container in containers:
+            job["progress"][container["name"]] = "running"
+            job["results"][container["name"]] = {"success": False, "output": "", "packages_upgraded": 0}
+        
+        # Write containers JSON to a temp file on VM 102 and pass via @filename syntax
+        # This avoids shell interpretation issues with JSON
+        containers_json = json.dumps(containers)
+        extra_vars_file = "/tmp/ansible_containers.json"
+        
+        # Write JSON file to VM using Python to avoid shell escaping issues
+        write_json_script = f'''import json
+containers = {repr(containers)}
+with open("{extra_vars_file}", "w") as f:
+    json.dump({{"target_containers": containers}}, f)
+print("JSON file written")
+'''
+        
+        write_json_cmd = [
+            "/usr/bin/ssh", "-o", "ConnectTimeout=10", "-o", "BatchMode=yes",
+            self.ansible_host,
+            f"qm guest exec {self.ansible_vm} -- python3"
+        ]
+        
+        write_result = subprocess.run(
+            write_json_cmd,
+            input=write_json_script,
+            capture_output=True,
+            text=True,
+            timeout=10
+        )
+        
+        # Parse qm guest exec output
+        write_stdout = write_result.stdout
+        if write_stdout.strip().startswith('{'):
+            try:
+                json_output = json.loads(write_stdout)
+                write_stdout = json_output.get('out-data', write_stdout)
+                if 'err-data' in json_output:
+                    write_result.stderr = json_output.get('err-data', write_result.stderr)
+            except:
+                pass
+        
+        if write_result.returncode != 0 or "JSON file written" not in write_stdout:
+            raise Exception(f"Failed to write containers JSON file: {write_result.stderr}")
         
         try:
-            # Initialize progress for all containers
-            for container in containers:
-                job["progress"][container["name"]] = "running"
-                job["results"][container["name"]] = {"success": False, "output": "", "packages_upgraded": 0}
-            
-            # Execute container patching playbook
-            # Pass target_containers as JSON (Ansible will parse it automatically)
-            containers_json = json.dumps(containers)
+            # Execute container patching playbook using @filename syntax for JSON
             cmd = [
                 "/usr/bin/ssh", "-o", "ConnectTimeout=10", "-o", "BatchMode=yes",
                 self.ansible_host,
                 f"qm guest exec {self.ansible_vm} -- ansible-playbook",
                 f"{self.playbook_path}/patch-containers.yml",
-                "-e", f"target_containers={containers_json}",
+                "-e", f"@{extra_vars_file}",
                 "-e", f"patch_type={job['patch_type']}",
                 "-e", f"dry_run_mode={str(job['dry_run']).lower()}"
             ]
@@ -513,9 +547,13 @@ fi
                         }
         
         finally:
-            # Cleanup
-            if os.path.exists(containers_file):
-                os.unlink(containers_file)
+            # Cleanup: Remove JSON file from VM
+            cleanup_cmd = [
+                "/usr/bin/ssh", "-o", "ConnectTimeout=10", "-o", "BatchMode=yes",
+                self.ansible_host,
+                f"qm guest exec {self.ansible_vm} -- bash -c 'rm -f {extra_vars_file}'"
+            ]
+            subprocess.run(cleanup_cmd, capture_output=True, timeout=5)
     
     def _parse_container_output(self, stdout: str, containers: List[Dict[str, Any]]) -> Dict[str, Dict[str, Any]]:
         """Parse container patching output"""
