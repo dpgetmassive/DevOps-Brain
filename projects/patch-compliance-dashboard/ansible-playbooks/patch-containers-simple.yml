@@ -32,11 +32,11 @@
     
     - name: Patch container
       shell: |
-        pct exec {{ item.ct_id }} -- bash -c "
+        ssh -o StrictHostKeyChecking=no {{ item.node }} "pct exec {{ item.ct_id }} -- bash -c '
           export DEBIAN_FRONTEND=noninteractive &&
           apt update &&
           apt list --upgradable 2>/dev/null | tail -n+2
-        "
+        '"
       loop: "{{ containers }}"
       register: container_updates
       changed_when: false
@@ -45,9 +45,9 @@
     
     - name: Count updates per container
       shell: |
-        pct exec {{ item.ct_id }} -- bash -c "
+        ssh -o StrictHostKeyChecking=no {{ item.node }} "pct exec {{ item.ct_id }} -- bash -c '
           apt list --upgradable 2>/dev/null | tail -n+2 | wc -l
-        "
+        '"
       loop: "{{ containers }}"
       register: container_counts
       changed_when: false
@@ -55,9 +55,9 @@
     
     - name: Count security updates per container
       shell: |
-        pct exec {{ item.ct_id }} -- bash -c "
+        ssh -o StrictHostKeyChecking=no {{ item.node }} "pct exec {{ item.ct_id }} -- bash -c '
           apt list --upgradable 2>/dev/null | grep -i security | wc -l
-        "
+        '"
       loop: "{{ containers }}"
       register: container_security_counts
       changed_when: false
@@ -72,10 +72,10 @@
     
     - name: Dry run - Show what would be upgraded
       shell: |
-        pct exec {{ item.ct_id }} -- bash -c "
+        ssh -o StrictHostKeyChecking=no {{ item.node }} "pct exec {{ item.ct_id }} -- bash -c '
           export DEBIAN_FRONTEND=noninteractive &&
           apt upgrade --dry-run
-        "
+        '"
       loop: "{{ containers }}"
       register: container_dry_run
       when: 
@@ -85,10 +85,10 @@
     
     - name: Upgrade packages (security only)
       shell: |
-        pct exec {{ item.ct_id }} -- bash -c "
+        ssh -o StrictHostKeyChecking=no {{ item.node }} "pct exec {{ item.ct_id }} -- bash -c '
           export DEBIAN_FRONTEND=noninteractive &&
-          apt upgrade -y {{ '--only-upgrade $(apt list --upgradable 2>/dev/null | grep -i security | cut -d/ -f1 | tr \"\\n\" \" \")' if security_only else '' }}
-        "
+          apt upgrade -y {{ \"--only-upgrade $(apt list --upgradable 2>/dev/null | grep -i security | cut -d/ -f1 | tr \\\"\\\\n\\\" \\\" )\" if security_only else \"\" }}
+        '"
       loop: "{{ containers }}"
       when: 
         - containers | length > 0
@@ -99,10 +99,10 @@
     
     - name: Upgrade all packages
       shell: |
-        pct exec {{ item.ct_id }} -- bash -c "
+        ssh -o StrictHostKeyChecking=no {{ item.node }} "pct exec {{ item.ct_id }} -- bash -c '
           export DEBIAN_FRONTEND=noninteractive &&
           apt upgrade -y
-        "
+        '"
       loop: "{{ containers }}"
       when: 
         - containers | length > 0
