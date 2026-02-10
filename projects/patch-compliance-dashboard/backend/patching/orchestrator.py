@@ -375,11 +375,19 @@ fi
                 
                 if asset:
                     if asset.get("type") == "ct":
+                        node_host = asset.get("host", "pve-scratchy")
+                        # Map node hostname to IP address
+                        node_ip_map = {
+                            "pve-scratchy": "10.16.1.22",
+                            "pve-itchy": "10.16.1.8"
+                        }
+                        node_ip = node_ip_map.get(node_host, "10.16.1.22")
                         containers.append({
                             "name": asset.get("name"),
                             "ct_id": asset.get("vmid"),
                             "ip": asset.get("ip"),
-                            "node": asset.get("host", "pve-scratchy")
+                            "node": node_host,
+                            "node_ip": node_ip
                         })
                     else:
                         host_ips.append(asset.get("ip") or hostname)

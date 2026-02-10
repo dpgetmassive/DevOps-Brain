@@ -32,7 +32,7 @@
     
     - name: Patch container
       shell: |
-        ssh -o StrictHostKeyChecking=no {{ item.node }} "pct exec {{ item.ct_id }} -- bash -c '
+        ssh -o StrictHostKeyChecking=no -o ConnectTimeout=5 root@{{ item.node_ip }} "pct exec {{ item.ct_id }} -- bash -c '
           export DEBIAN_FRONTEND=noninteractive &&
           apt update &&
           apt list --upgradable 2>/dev/null | tail -n+2
@@ -45,7 +45,7 @@
     
     - name: Count updates per container
       shell: |
-        ssh -o StrictHostKeyChecking=no {{ item.node }} "pct exec {{ item.ct_id }} -- bash -c '
+        ssh -o StrictHostKeyChecking=no -o ConnectTimeout=5 root@{{ item.node_ip }} "pct exec {{ item.ct_id }} -- bash -c '
           apt list --upgradable 2>/dev/null | tail -n+2 | wc -l
         '"
       loop: "{{ containers }}"
@@ -55,7 +55,7 @@
     
     - name: Count security updates per container
       shell: |
-        ssh -o StrictHostKeyChecking=no {{ item.node }} "pct exec {{ item.ct_id }} -- bash -c '
+        ssh -o StrictHostKeyChecking=no -o ConnectTimeout=5 root@{{ item.node_ip }} "pct exec {{ item.ct_id }} -- bash -c '
           apt list --upgradable 2>/dev/null | grep -i security | wc -l
         '"
       loop: "{{ containers }}"
@@ -72,7 +72,7 @@
     
     - name: Dry run - Show what would be upgraded
       shell: |
-        ssh -o StrictHostKeyChecking=no {{ item.node }} "pct exec {{ item.ct_id }} -- bash -c '
+        ssh -o StrictHostKeyChecking=no -o ConnectTimeout=5 root@{{ item.node_ip }} "pct exec {{ item.ct_id }} -- bash -c '
           export DEBIAN_FRONTEND=noninteractive &&
           apt upgrade --dry-run
         '"
@@ -85,7 +85,7 @@
     
     - name: Upgrade packages (security only)
       shell: |
-        ssh -o StrictHostKeyChecking=no {{ item.node }} "pct exec {{ item.ct_id }} -- bash -c '
+        ssh -o StrictHostKeyChecking=no -o ConnectTimeout=5 root@{{ item.node_ip }} "pct exec {{ item.ct_id }} -- bash -c '
           export DEBIAN_FRONTEND=noninteractive &&
           apt upgrade -y {{ \"--only-upgrade $(apt list --upgradable 2>/dev/null | grep -i security | cut -d/ -f1 | tr \\\"\\\\n\\\" \\\" )\" if security_only else \"\" }}
         '"
@@ -99,7 +99,7 @@
     
     - name: Upgrade all packages
       shell: |
-        ssh -o StrictHostKeyChecking=no {{ item.node }} "pct exec {{ item.ct_id }} -- bash -c '
+        ssh -o StrictHostKeyChecking=no -o ConnectTimeout=5 root@{{ item.node_ip }} "pct exec {{ item.ct_id }} -- bash -c '
           export DEBIAN_FRONTEND=noninteractive &&
           apt upgrade -y
         '"
