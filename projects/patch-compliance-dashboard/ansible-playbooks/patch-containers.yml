@@ -5,7 +5,7 @@
   gather_facts: no
   
   vars:
-    containers: "{{ (target_containers | default([]) | from_json) if (target_containers | default('') | type_debug == 'str') else (target_containers | default([])) }}"
+    containers: "{{ target_containers | default([]) }}"
     security_only: "{{ patch_type | default('all') == 'security' }}"
     dry_run: "{{ dry_run_mode | default(false) }}"
     proxmox_nodes: ["pve-scratchy", "pve-itchy"]
