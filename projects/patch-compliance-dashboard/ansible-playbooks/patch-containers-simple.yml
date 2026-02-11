@@ -6,7 +6,7 @@
   
   vars:
     security_only: "{{ patch_type | default('all') == 'security' }}"
-    dry_run: "{{ dry_run_mode | default(false) }}"
+    dry_run: "{{ (dry_run_mode | default('false') | lower) == 'true' }}"
   
   tasks:
     - name: Read container list from file
@@ -96,9 +96,9 @@
         - "{{ container_security_counts.results | default([]) }}"
       when: 
         - containers | length > 0
-        - not dry_run | bool == false
+        - dry_run == false
         - (item.1.stdout | default('0') | trim | int) > 0
-        - security_only | bool == true
+        - security_only == true
       register: container_upgrade_security
     
     - name: Upgrade all packages
@@ -112,9 +112,9 @@
         - "{{ container_counts.results | default([]) }}"
       when: 
         - containers | length > 0
-        - not dry_run | bool == false
+        - dry_run == false
         - (item.1.stdout | default('0') | trim | int) > 0
-        - security_only | bool == false
+        - security_only == false
       register: container_upgrade_all
     
     - name: Final status
