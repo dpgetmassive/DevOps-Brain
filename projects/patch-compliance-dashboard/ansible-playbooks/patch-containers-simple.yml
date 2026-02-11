@@ -89,16 +89,16 @@
       shell: |
         ssh -o StrictHostKeyChecking=no -o ConnectTimeout=5 root@{{ item.0.node_ip }} "pct exec {{ item.0.ct_id }} -- bash -c '
           export DEBIAN_FRONTEND=noninteractive &&
-          apt upgrade -y {{ \"--only-upgrade $(apt list --upgradable 2>/dev/null | grep -i security | cut -d/ -f1 | tr \\\"\\\\n\\\" \\\" )\" if security_only else \"\" }}
+          apt upgrade -y --only-upgrade $(apt list --upgradable 2>/dev/null | grep -i security | cut -d/ -f1 | tr \"\\n\" \" \")
         '"
       with_together:
         - "{{ containers }}"
         - "{{ container_security_counts.results | default([]) }}"
       when: 
         - containers | length > 0
-        - not dry_run
-        - item.1.stdout | int > 0
-        - security_only
+        - not dry_run | bool == false
+        - (item.1.stdout | default('0') | trim | int) > 0
+        - security_only | bool == true
       register: container_upgrade_security
     
     - name: Upgrade all packages
@@ -112,9 +112,9 @@
         - "{{ container_counts.results | default([]) }}"
       when: 
         - containers | length > 0
-        - not dry_run
-        - item.1.stdout | int > 0
-        - not security_only
+        - not dry_run | bool == false
+        - (item.1.stdout | default('0') | trim | int) > 0
+        - security_only | bool == false
       register: container_upgrade_all
     
     - name: Final status
