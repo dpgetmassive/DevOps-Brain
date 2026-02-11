@@ -66,8 +66,10 @@
     
     - name: Display update summary
       debug:
-        msg: "{{ item.item.name }} (CT {{ item.item.ct_id }}): {{ item.stdout | trim }} total, {{ container_security_counts.results[loop.index0].stdout | trim }} security"
+        msg: "{{ item.item.name }} (CT {{ item.item.ct_id }}): {{ item.stdout | trim }} total, {{ container_security_counts.results[ansible_loop.index0].stdout | trim }} security"
       loop: "{{ container_counts.results | default([]) }}"
+      loop_control:
+        label: "{{ item.item.name }}"
       when: containers | length > 0
     
     - name: Dry run - Show what would be upgraded
@@ -90,10 +92,12 @@
           apt upgrade -y {{ \"--only-upgrade $(apt list --upgradable 2>/dev/null | grep -i security | cut -d/ -f1 | tr \\\"\\\\n\\\" \\\" )\" if security_only else \"\" }}
         '"
       loop: "{{ containers }}"
+      loop_control:
+        label: "{{ item.name }}"
       when: 
         - containers | length > 0
         - not dry_run
-        - container_security_counts.results[loop.index0].stdout | int > 0
+        - container_security_counts.results[ansible_loop.index0].stdout | int > 0
         - security_only
       register: container_upgrade_security
     
@@ -104,10 +108,12 @@
           apt upgrade -y
         '"
       loop: "{{ containers }}"
+      loop_control:
+        label: "{{ item.name }}"
       when: 
         - containers | length > 0
         - not dry_run
-        - container_counts.results[loop.index0].stdout | int > 0
+        - container_counts.results[ansible_loop.index0].stdout | int > 0
         - not security_only
       register: container_upgrade_all
     
