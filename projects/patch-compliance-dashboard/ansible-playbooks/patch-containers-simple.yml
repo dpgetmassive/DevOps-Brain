@@ -66,10 +66,10 @@
     
     - name: Display update summary
       debug:
-        msg: "{{ item.item.name }} (CT {{ item.item.ct_id }}): {{ item.stdout | trim }} total, {{ container_security_counts.results[ansible_loop.index0].stdout | trim }} security"
-      loop: "{{ container_counts.results | default([]) }}"
-      loop_control:
-        label: "{{ item.item.name }}"
+        msg: "{{ item.0.item.name }} (CT {{ item.0.item.ct_id }}): {{ item.0.stdout | trim }} total, {{ item.1.stdout | trim }} security"
+      with_together:
+        - "{{ container_counts.results | default([]) }}"
+        - "{{ container_security_counts.results | default([]) }}"
       when: containers | length > 0
     
     - name: Dry run - Show what would be upgraded
@@ -87,33 +87,33 @@
     
     - name: Upgrade packages (security only)
       shell: |
-        ssh -o StrictHostKeyChecking=no -o ConnectTimeout=5 root@{{ item.node_ip }} "pct exec {{ item.ct_id }} -- bash -c '
+        ssh -o StrictHostKeyChecking=no -o ConnectTimeout=5 root@{{ item.0.node_ip }} "pct exec {{ item.0.ct_id }} -- bash -c '
           export DEBIAN_FRONTEND=noninteractive &&
           apt upgrade -y {{ \"--only-upgrade $(apt list --upgradable 2>/dev/null | grep -i security | cut -d/ -f1 | tr \\\"\\\\n\\\" \\\" )\" if security_only else \"\" }}
         '"
-      loop: "{{ containers }}"
-      loop_control:
-        label: "{{ item.name }}"
+      with_together:
+        - "{{ containers }}"
+        - "{{ container_security_counts.results | default([]) }}"
       when: 
         - containers | length > 0
         - not dry_run
-        - container_security_counts.results[ansible_loop.index0].stdout | int > 0
+        - item.1.stdout | int > 0
         - security_only
       register: container_upgrade_security
     
     - name: Upgrade all packages
       shell: |
-        ssh -o StrictHostKeyChecking=no -o ConnectTimeout=5 root@{{ item.node_ip }} "pct exec {{ item.ct_id }} -- bash -c '
+        ssh -o StrictHostKeyChecking=no -o ConnectTimeout=5 root@{{ item.0.node_ip }} "pct exec {{ item.0.ct_id }} -- bash -c '
           export DEBIAN_FRONTEND=noninteractive &&
           apt upgrade -y
         '"
-      loop: "{{ containers }}"
-      loop_control:
-        label: "{{ item.name }}"
+      with_together:
+        - "{{ containers }}"
+        - "{{ container_counts.results | default([]) }}"
       when: 
         - containers | length > 0
         - not dry_run
-        - container_counts.results[ansible_loop.index0].stdout | int > 0
+        - item.1.stdout | int > 0
         - not security_only
       register: container_upgrade_all
     
